@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>이생규장전 감정 그래프 분석</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Pretendard', 'Noto Sans KR', Arial, sans-serif;
+      background: #f4efe7;
+      color: #2f2a25;
+      line-height: 1.6;
+    }
+
+    header {
+      background: linear-gradient(135deg, #3f2b2b, #7b3f3f);
+      color: white;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2.2rem;
+      letter-spacing: -0.03em;
+    }
+
+    header p {
+      margin: 14px auto 0;
+      max-width: 760px;
+      font-size: 1.05rem;
+      opacity: 0.95;
+    }
+
+    main {
+      width: min(1100px, 94vw);
+      margin: 28px auto 60px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(80, 52, 40, 0.12);
+      border-radius: 22px;
+      padding: 24px;
+      margin-bottom: 22px;
+      box-shadow: 0 10px 30px rgba(50, 36, 24, 0.08);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.45rem;
+      color: #5b2f2f;
+    }
+
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .guide-item {
+      background: #fff7ed;
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid #efd9c1;
+    }
+
+    .guide-item strong {
+      display: block;
+      font-size: 1.05rem;
+      color: #7b3f3f;
+      margin-bottom: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 14px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #eadfd5;
+      vertical-align: middle;
+      text-align: left;
+    }
+
+    th {
+      background: #6f3a3a;
+      color: white;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:nth-child(even) td {
+      background: #fff9f1;
+    }
+
+    .event-label {
+      font-weight: 700;
+      color: #3f2b2b;
+    }
+
+    .event-desc {
+      font-size: 0.92rem;
+      color: #6a5b50;
+    }
+
+    input[type="number"] {
+      width: 90px;
+      padding: 10px;
+      border: 1px solid #c9b7a9;
+      border-radius: 10px;
+      font-size: 1rem;
+      text-align: center;
+      background: #fffdf9;
+    }
+
+    input[type="number"]:focus {
+      outline: 3px solid rgba(123, 63, 63, 0.22);
+      border-color: #7b3f3f;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(50, 36, 24, 0.12);
+    }
+
+    .primary {
+      background: #7b3f3f;
+      color: white;
+    }
+
+    .secondary {
+      background: #ead7c4;
+      color: #3f2b2b;
+    }
+
+    .chart-wrap {
+      height: 460px;
+    }
+
+    .question-list {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .question-list li {
+      margin: 8px 0;
+    }
+
+    .small-note {
+      color: #6a5b50;
+      font-size: 0.94rem;
+      margin-top: 10px;
+    }
+
+    .result-box {
+      background: #f8efe5;
+      border-left: 6px solid #7b3f3f;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-top: 16px;
+      white-space: pre-line;
+    }
+
+    footer {
+      text-align: center;
+      color: #7b6b5f;
+      padding: 30px 16px 44px;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 720px) {
+      header h1 {
+        font-size: 1.7rem;
+      }
+
+      .chart-wrap {
+        height: 380px;
+      }
+
+      th, td {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>이생규장전 감정 그래프 분석</h1>
+    <p>주요 사건별 감정 점수를 직접 입력하고, 작품의 정서 흐름을 그래프로 시각화해 봅시다.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>감정 점수 기준</h2>
+      <div class="guide-grid">
+        <div class="guide-item"><strong>+10</strong>사랑, 행복, 희망이 가장 강한 장면</div>
+        <div class="guide-item"><strong>+5</strong>설렘, 기대, 안정감이 드러나는 장면</div>
+        <div class="guide-item"><strong>0</strong>감정이 크게 기울지 않는 중립 장면</div>
+        <div class="guide-item"><strong>-5</strong>갈등, 불안, 슬픔이 커지는 장면</div>
+        <div class="guide-item"><strong>-10</strong>죽음, 상실, 비극성이 가장 강한 장면</div>
+      </div>
+      <p class="small-note">※ 정답은 하나가 아닙니다. 중요한 것은 “왜 그렇게 점수를 주었는가”를 작품 내용에 근거하여 설명하는 것입니다.</p>
+    </section>
+
+    <section class="card">
+      <h2>사건별 감정 점수 입력</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 48px;">순서</th>
+            <th>주요 사건</th>
+            <th style="width: 120px;">감정 점수</th>
+          </tr>
+        </thead>
+        <tbody id="eventTable"></tbody>
+      </table>
+
+      <div class="button-row">
+        <button class="primary" onclick="updateChart()">그래프 다시 그리기</button>
+        <button class="secondary" onclick="resetScores()">예시 점수로 되돌리기</button>
+        <button class="secondary" onclick="analyzeScores()">감정 흐름 간단 분석</button>
+      </div>
+
+      <div id="analysisResult" class="result-box" style="display:none;"></div>
+    </section>
+
+    <section class="card">
+      <h2>감정 그래프</h2>
+      <div class="chart-wrap">
+        <canvas id="emotionChart"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>탐구 질문</h2>
+      <ol class="question-list">
+        <li>가장 높은 점수를 준 사건은 무엇이며, 그 이유는 무엇인가요?</li>
+        <li>가장 낮은 점수를 준 사건은 무엇이며, 작품의 비극성과 어떻게 연결되나요?</li>
+        <li>‘결혼’ 장면 뒤에 ‘홍건적의 난’이 이어질 때 감정 곡선은 어떻게 변하나요?</li>
+        <li>‘죽음 이후의 재회’는 행복한 장면인가요, 슬픈 장면인가요?</li>
+        <li>이 그래프를 근거로 볼 때, 이 작품은 해피엔딩에 가까운가요, 비극에 가까운가요?</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    고전소설 × 데이터 시각화 수업 자료
+  </footer>
+
+  <script>
+    const events = [
+      {
+        ko: "이생과 최씨의 첫 만남",
+        en: "First Meeting",
+        desc: "두 인물이 서로를 알게 되며 사랑의 가능성이 시작되는 장면",
+        score: ""
+      },
+      {
+        ko: "두 사람의 사랑이 깊어짐",
+        en: "Deep Love",
+        desc: "서로에 대한 마음이 분명해지고 사랑이 깊어지는 장면",
+        score: ""
+      },
+      {
+        ko: "부모의 반대와 이별",
+        en: "Separation",
+        desc: "외부의 반대와 현실적 제약으로 사랑이 흔들리는 장면",
+        score: ""
+      },
+      {
+        ko: "이생과 최씨의 결혼",
+        en: "Marriage",
+        desc: "두 사람이 사랑을 이루며 행복이 최고조에 이르는 장면",
+        score: ""
+      },
+      {
+        ko: "홍건적의 난",
+        en: "War Crisis",
+        desc: "역사적 혼란이 개인의 사랑과 삶을 파괴하는 전환점",
+        score: ""
+      },
+      {
+        ko: "최씨의 죽음",
+        en: "Death of Choe",
+        desc: "상실과 비극성이 가장 강하게 드러나는 장면",
+        score: ""
+      },
+      {
+        ko: "죽음 이후의 재회",
+        en: "Reunion",
+        desc: "사랑이 죽음 이후에도 이어지지만, 환상성과 비극성이 함께 나타나는 장면",
+        score: ""
+      },
+      {
+        ko: "마지막 이별",
+        en: "Final Farewell",
+        desc: "두 사람의 사랑이 끝내 현실에서 완성될 수 없음을 보여주는 장면",
+        score: ""
+      }
+    ];
+
+    let emotionChart;
+
+    function buildTable() {
+      const tbody = document.getElementById("eventTable");
+      tbody.innerHTML = "";
+
+      events.forEach((event, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>
+            <div class="event-label">${event.ko}</div>
+            <div class="event-desc">${event.en} · ${event.desc}</div>
+          </td>
+          <td>
+            <input type="number" min="-10" max="10" value="${event.score}" id="score-${index}" oninput="updateChart()" />
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function getScores() {
+      return events.map((_, index) => {
+        const input = document.getElementById(`score-${index}`);
+        if (input.value === "") return null;
+
+        let value = Number(input.value);
+
+        if (Number.isNaN(value)) value = 0;
+        if (value > 10) value = 10;
+        if (value < -10) value = -10;
+
+        input.value = value;
+        return value;
+      });
+    }
+
+    function updateChart() {
+      const scores = getScores();
+      emotionChart.data.datasets[0].data = scores.map(score => score === null ? NaN : score);
+      emotionChart.update();
+      document.getElementById("analysisResult").style.display = "none";
+    }
+
+    function resetScores() {
+      events.forEach((event, index) => {
+        document.getElementById(`score-${index}`).value = event.score;
+      });
+      updateChart();
+    }
+
+    function analyzeScores() {
+      const scores = getScores();
+      const maxScore = Math.max(...scores);
+      const minScore = Math.min(...scores);
+      const maxIndex = scores.indexOf(maxScore);
+      const minIndex = scores.indexOf(minScore);
+
+      let biggestDrop = 0;
+      let biggestDropIndex = 0;
+      let biggestRise = 0;
+      let biggestRiseIndex = 0;
+
+      for (let i = 1; i < scores.length; i++) {
+        const diff = scores[i] - scores[i - 1];
+        if (diff < biggestDrop) {
+          biggestDrop = diff;
+          biggestDropIndex = i;
+        }
+        if (diff > biggestRise) {
+          biggestRise = diff;
+          biggestRiseIndex = i;
+        }
+      }
+
+      const result = `가장 감정 점수가 높은 장면: ${events[maxIndex].ko} (${maxScore}점)
+가장 감정 점수가 낮은 장면: ${events[minIndex].ko} (${minScore}점)
+가장 큰 감정 상승: ${events[biggestRiseIndex - 1]?.ko || "시작"} → ${events[biggestRiseIndex].ko} (${biggestRise >= 0 ? "+" : ""}${biggestRise}점)
+가장 큰 감정 하락: ${events[biggestDropIndex - 1]?.ko || "시작"} → ${events[biggestDropIndex].ko} (${biggestDrop}점)
+
+분석 포인트: 감정이 크게 상승하거나 하락하는 지점은 작품의 전환점일 가능성이 큽니다. 특히 결혼 이후 홍건적의 난으로 이어지는 변화는 행복의 절정에서 비극으로 급격히 전환되는 구조를 보여 줍니다.`;
+
+      const box = document.getElementById("analysisResult");
+      box.textContent = result;
+      box.style.display = "block";
+    }
+
+    function createChart() {
+      const ctx = document.getElementById("emotionChart");
+      emotionChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: events.map(event => event.en),
+          datasets: [{
+            label: "Emotion Score",
+            data: events.map(event => event.score === "" ? NaN : event.score),
+            borderWidth: 3,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            tension: 0.25
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              min: -10,
+              max: 10,
+              ticks: {
+                stepSize: 2
+              },
+              title: {
+                display: true,
+                text: "Emotion Score"
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: "Major Events"
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: true
+            },
+            tooltip: {
+              callbacks: {
+                afterLabel: function(context) {
+                  const index = context.dataIndex;
+                  return events[index].ko;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    buildTable();
+    createChart();
+  </script>
+</body>
+</html>
